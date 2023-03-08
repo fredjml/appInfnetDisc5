@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app: wordpress
+    tier: frontend
+  name: wp-deploy
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: mysql-hls
+      tier: db
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: wordpress
+        tier: frontend
+    spec:
+      resources:
+          requests:
+            cpu: 125m
+            memory: 128Mi
+          limits:
+            cpu: 250m
+            memory: 256Mi
+      containers:
+      - image: wordpress:4.8-apache
+        name: wordpress
+        envFrom:
+        - secretRef:
+            name: wp-connection
+          configMapRef:
+            name: wp-cm-vars
+        resources:
+          requests:
+            cpu: 125m
+            memory: 128Mi
+          limits:
+            cpu: 250m
+            memory: 256Mi
+        ports:
+        - containerPort: 80
+          name: wordpress
+        # volumeMounts:
+        # - name: wordpress-persistent-storage
+        #  mountPath: /var/www/html
+      volumes:
+      - name: wp-persistent-stg
+        persistentVolumeClaim:
+          claimName: wp-pvc-rwx        
