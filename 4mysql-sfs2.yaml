@@ -44,9 +44,9 @@ spec:
         ports:
         - containerPort: 3306
           name: mysql
-        volumeMounts:
-        - mountPath: /var/lib/mysql
-          name: data
+        #volumeMounts:
+        #- mountPath: /var/lib/mysql
+        #  name: data
       volumes:
       - name: data
         persistentVolumeClaim:
