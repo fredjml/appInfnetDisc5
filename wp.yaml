@@ -1,0 +1,88 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: wp-db-credentials
+type: Opaque
+data:
+  username: <base64-encoded-username>
+  password: <base64-encoded-password>
+Replace <base64-encoded-username> and <base64-encoded-password> with your own encoded credentials. You can encode your credentials by running the following commands:
+
+bash
+Copy code
+echo -n "your-username" | base64
+echo -n "your-password" | base64
+Create a ConfigMap that contains the configuration options for WordPress. You can create a ConfigMap by creating a YAML file with the following contents:
+php
+Copy code
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: wp-config
+data:
+  wp-config.php: |
+    <?php
+    define('DB_NAME', 'wordpress');
+    define('DB_USER', '$(username)');
+    define('DB_PASSWORD', '$(password)');
+    define('DB_HOST', 'localhost');
+    define('DB_CHARSET', 'utf8mb4');
+    define('DB_COLLATE', '');
+    define('AUTH_KEY',         'put your unique phrase here');
+    define('SECURE_AUTH_KEY',  'put your unique phrase here');
+    define('LOGGED_IN_KEY',    'put your unique phrase here');
+    define('NONCE_KEY',        'put your unique phrase here');
+    define('AUTH_SALT',        'put your unique phrase here');
+    define('SECURE_AUTH_SALT', 'put your unique phrase here');
+    define('LOGGED_IN_SALT',   'put your unique phrase here');
+    define('NONCE_SALT',       'put your unique phrase here');
+    $table_prefix = 'wp_';
+    define('WP_DEBUG', false);
+    if ( !defined('ABSPATH') )
+        define('ABSPATH', dirname(__FILE__) . '/');
+    require_once(ABSPATH . 'wp-settings.php');
+Replace the values for DB_NAME, DB_USER, DB_PASSWORD, and the salt values with your own values. You can reference the username and password values from the Secret you created in step 1 by using the syntax $(username) and $(password).
+
+Create a PVC that uses the Secret and ConfigMap. You can create a PVC by creating a YAML file with the following contents:
+yaml
+Copy code
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: wp-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+  volumeName: wp-pv
+  volumeMode: Filesystem
+  storageClassName: standard
+  selector:
+    matchLabels:
+      app: wordpress
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: wp-pod
+spec:
+  containers:
+    - name: wp-container
+      image: wordpress
+      env:
+        - name: WORDPRESS_DB_HOST
+          value: localhost
+        - name: WORDPRESS_DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: wp-db-credentials
+              key: username
+        - name: WORDPRESS_DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: wp-db-credentials
+              key: password
+      ports:
+        - containerPort
